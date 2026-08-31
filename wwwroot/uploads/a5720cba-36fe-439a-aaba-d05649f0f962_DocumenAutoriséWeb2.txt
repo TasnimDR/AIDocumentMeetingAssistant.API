@@ -1,0 +1,292 @@
+*********_______________DOC AUTORISE COMPLET________________*******
+------------
+Chapitre 1 :
+------------
+Framework = Cadre de travail.
+Composer  = Outil de gestion de dépendances PHP (Crée un fichier intitulé composer.json contient la liste des dépendances du projet).
+CLI = Outil de développement qui aide à créer, exécuter et gérer les applications Symfony à partir du teminal.
+MVC = Séparer les requêtes de la base de données (Model), dela logique relative au traitement des demandes (Controller), et à l'affichage (View).
+Controller = Traiter la requête de l'utilisateur et générer une réponse.
+Model = Gérer les données.
+View = Afficher les données récupérées du Model.
+/bin = Les fichiers exécutables.
+/config = La configuration de l'application Symfony (routes,services...).
+/public = Les fichiers accessibles au public + contrôleur frontal.
+/src = Entity + Controller + Form.
+/templates = Les pages qui vont être affichées à l'écran (.htm.twig)
+/test = Les test automatiques.
+/vendor = Les dépendances de notre projet.
+.env = La configuration de l'environnement d'exécution.
+Flux applicatif d'une requête :
+	1- Le visiteur demande l'URL /student.
+	2- Le contrôleur frontal va charger Kernel et lui trasmet l'URL.
+	3- Le Kernel appel le Routeur pour savoir quel contrôleur exécute l'URL.
+	4- Le Routeur cherche le contrôleur à exécuter et l'envoie au Kernel.
+	5- Le Kernel appel ce contrôleur.
+	6- Ce contrôleur demande du modèle les données et les donne à la vue pour l'affichage.
+	7- Le contrôleur transmet la page HTML au visiteur.
+Contrôleur frontal = Le fichier par lequel passent toutes les pages.
+Route = Faire correspondre une URL et une action d'un contrôlleur.
+Routeur = Chercher la route qui correspond à l'URL appelée et retourner les paramètres de cette route.
+Symfony Flex = Un pulgin Compsoer qui permet d'exécuter des tâches sur certaines commandes Composer et permet d'automatiser l'installation et la supression des dépendances en fournissant une configuration par défaut et laisse une trace des recette qu'il a installées dans un fichier appelé symfony.lock
+MakerBundle = Créer de commandes vides, des contrôleurs, des classes de formulaire etc...
+Création d'une route :
+	Méthode 1 : YML
+		 #index: => Nom de la route
+		 # path: / => Chemin
+		 # controller: App\Controller\NomController::nomMéthode
+	Méthode 2 : Annotation
+		 /**
+		 * @Route("/", name="index")
+		 */
+		 {Définition et implémentation de la méthode}
+	Méthode 3 : Annotation
+		 #[Route('/', name: 'nomDeLaRoute')]
+		 {Définition et implémentation de la méthode}
+------------
+Chapitre 2 :
+------------
+Twig = Un moteur de templates qui permet de séparer la présentation des données du traitement.
+------------
+Chapitre 3 :
+------------
+ORM/ Object-Rleational Mapping = Faire la relation entre les données orientées objet et les données relationnelles.
+Doctrine = Un ORM
+Configuration de l'entité :
+	#[ORM\Id] => Spécifie la clé primaire.
+	#[ORM\GeneratedValue] => Auto-incrémentation de l'ID.
+	#[ORM\Column] => Définir les caractéristiques de la colonne concernée.
+La Migration = Tracker les différents changements et évolutions de la base de données et génère un fichier de migration (le nom du fichier sera stocké dans la bd table: doctrine_migration_versions).
+Le Repository = Une classe PHP qui contient les méthodes de récupération de données relatives aux entités.
+EM/ Entity Manager = Un gestionnaire d'entités placée entre les objets et les tables de la base de données qui permet l'insertion, la mise à jour et la suppression des données de la base de données.
+--------------
+Etude de cas :
+--------------
+Création d'un projet : symfony new NomProjet --version=5.4 -webapp
+
+Création d'une base de données : symfony console doctrine:database:create
+                                 symfony console make:migration
+                                 symfone console doctrine:migrations:migrate
+
+Création d'une entité : symfony console make:entity Nom
+
+Création d'un contrôlleur : symfony console make:controller NomController
+
+Création d'un form : symfony console make:form NomFormType
+
+------------
+Repository :
+------------
+
+Tri Croissant [Name] :
+
+public function findClassroomByName()
+    {
+        $entityManager=$this->getEntityManager();
+        $query=$entityManager->createQuery('SELECT p FROM App\Entity\Classroom p ORDER BY p.Name ASC');
+        return $query->getResult();
+    }
+
+Tri Décroissant [Name] :
+
+public function findClassroomByName()
+    {
+        $entityManager=$this->getEntityManager();
+        $query=$entityManager->createQuery('SELECT p FROM App\Entity\Classroom p ORDER BY p.Name DESC');
+        return $query->getResult();
+    }
+
+Recherche par Email [@esprit.tn] :
+
+public function findClassroomByEmail()
+    {
+        $entityManager=$this->getEntityManager();
+        $query=$entityManager->createQuery('SELECT p FROM App\Entity\Classroom p WHERE p.email LIKE :email')->setParameter('email','%esprit.tn');
+        return $query->getResult();
+    }
+
+Recherche du nombre des classes :
+
+public function findClassroomNumber()
+    {
+        $entityManager=$this->getEntityManager();
+        $query=$entityManager->createQuery('SELECT count(p) FROM App\Entity\Classroom p');
+        return $query->getSingleScalarResult();
+    }
+
+------------
+Controller :
+------------
+
+use App\Repository\ClassroomRepository;
+use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Component\HttpFoundation\Request;
+use App\Form\ClassroomFormType;
+use App\Entity\Classroom;
+
+Affichage :
+
+#[Route('/afficheC', name: 'afficheC')]
+    public function afficheC(ClassroomRepository $repository): Response
+    {
+        $c=$repository->findAll();
+        return $this->render('classroom/afficheClassroom.html.twig', [
+            'classrooms' => $c,
+        ]);
+    }
+
+Supression :
+
+#[Route('/supprimeC/{id}', name: 'supprimeC')]
+    public function supprimeC($id, ClassroomRepository $repository, ManagerRegistry $doctrine): Response
+    {
+        $c=$repository->find($id);
+
+        $em=$doctrine->getManager();
+        $em->remove($c);
+        $em->flush();
+
+        return $this->redirectToRoute('afficheC');
+    }
+
+Ajout :
+
+#[Route('/ajoutC', name: 'ajoutC')]
+    public function ajoutC(ManagerRegistry $doctrine, Request $request)
+    {
+        $classroom=new Classroom();
+        $form=$this->createForm(ClassroomFormType::class,$classroom);
+        $form->handleRequest($request);
+        if($form->isSubmitted())
+        {
+            $em=$doctrine->getManager();
+            $em->persist($classroom);
+            $em->flush();
+            return $this->redirectToRoute("afficheC");
+        }
+        return $this->renderForm('classroom/ajoutC.html.twig', 
+            array("f"=>$form)
+        );
+    }
+
+Modification :
+
+#[Route('/modifC/{id}', name: 'modifC')]
+    public function modifC($id, ClassroomRepository $repository, ManagerRegistry $doctrine, Request $request): Response
+    {
+        $c=$repository->find($id);
+
+        $form=$this->createForm(ClassroomFormType::class,$c);
+        $form->handleRequest($request);
+
+        if($form->isSubmitted())
+        {
+            $em=$doctrine->getManager();
+            $em->flush();
+            return $this->redirectToRoute("afficheC");
+        }
+        return $this->renderForm('classroom/ajoutC.html.twig', 
+            array("f"=>$form)
+        );
+    }
+
+Fonction DQL :
+
+#[Route('/afficheC2', name: 'afficheC2')]
+    public function afficheC2(ManagerRegistry $doctrine)
+    {
+       $classrooms=$doctrine->getRepository(Classroom::class)->findClassroomByName();
+       return $this->render('classroom/affichec2.html.twig',["classrooms"=>$classrooms]);
+    }
+
+------------
+.html.twig :
+------------
+
+Affichage :
+
+<table border="2">
+<tr>
+  <th>Identifiant</th>
+  <th>Nom</th>
+  <th>Supprimer</th>
+  <th>Modifier</th>
+</tr>
+
+{% for i in classrooms %}
+<tr>
+  <td>{{i.id}}</td>
+  <td>{{i.name}}</td>
+  <td><form action="{{path('supprimeC',{'id':i.id})}}"><button>Supprimer</button></form></td>
+  <td><form action="{{path('modifC',{'id':i.id }) }}"> <button>Modifier</button></form></td>
+{% endfor %}
+
+Ajout :
+
+{{form (f)}}
+
+Fonction DQL :
+
+<h1>Liste des classes</h1>
+<table border="1">
+    <tr>
+        <td>Id</td>
+        <td>Name</td>
+    </tr>
+    {% for classroom in classrooms %}
+        <tr>
+            <td>{{classroom.id}}</td>
+            <td>{{classroom.Name}}</td>
+        </tr>
+    {% endfor %}
+</table>
+
+aa :
+
+sLe nombre des classes est: {{nombre}}
+
+------
+Form :
+------
+
+use Symfony\Component\Form\Extension\Core\Type\SubmitType;
+
+Liste déroulante :
+
+->add('Classroom, EntityType::class, [
+        'class'=>Classroom::class,
+        'choic_label'=>'name',
+        'multiple'=>false,
+        'expended'=>false,
+        ])
+
+Liste déroulante avec attribut multiple :
+
+->add('Classroom, EntityType::class, [
+        'class'=>Classroom::class,
+        'choic_label'=>'name',
+        'multiple'=>true,
+        'expended'=>false,
+        ])
+
+Bouton radio :
+
+->add('Classroom, EntityType::class, [
+        'class'=>Classroom::class,
+        'choic_label'=>'name',
+        'multiple'=>false,
+        'expended'=>true,
+        ])
+
+Cases à cocher :
+
+->add('Classroom, EntityType::class, [
+        'class'=>Classroom::class,
+        'choic_label'=>'name',
+        'multiple'=>true,
+        'expended'=>true,
+        ])
+
+Bouton Enregistrer :
+
+->add('Enregistrer', SubmitType::class)
